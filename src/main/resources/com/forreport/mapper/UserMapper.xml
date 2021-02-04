@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.forreport.mapper.UserMapper">
+
+	<!-- 회원 정보 등록 -->
+	<insert id="joinProcess">
+		insert into tbl_user (id, password, name, phone, email) values (#{id}, #{password}, #{name}, #{phone}, #{email})
+	</insert>
+
+	<!-- id로 회원 불러오기 -->
+<!-- 	<select id="getUser" resultType="com.forreport.domain.UserVO"> -->
+<!-- 		select * from tbl_user where id = #{id} -->
+<!-- 	</select> -->
+
+	<!-- 페이징 처리 된 전체 회원 목록 -->
+	<select id="getUserListWithPaging" resultType="com.forreport.domain.UserVO">
+		<![CDATA[
+			select 
+				id, password, name, phone, email, grade, enabled
+			from
+				(select /*+INDEX_DESC(tbl_user pk_tbl_user)*/
+					rownum rn, id, password, name, phone, email, grade, enabled
+					from
+						tbl_user
+					where 
+		]]>
+   			  <include refid="criteria"></include>
+   	 	<![CDATA[
+					rownum <= #{pageNum} * #{amount}
+				)
+			where rn > (#{pageNum} -1) * #{amount}
+		]]>
+	</select>
+	
+	<!-- 총 회원 수 -->
+	<select id="getTotalCount" resultType="int">
+		select count(*) from tbl_user
+		<choose>
+			<when test="type == 'I'.toString()">
+				where id like '%'||#{keyword}||'%'					
+			</when>
+			<when test="type == 'N'.toString()">
+				where name like '%'||#{keyword}||'%'
+			</when>
+			<when test="type == 'P'.toString()">
+				where phone like '%'||#{keyword}||'%'
+			</when>
+			<when test="type == 'E'.toString()">
+				where email like '%'||#{keyword}||'%'
+			</when>
+			<when test="type == 'G'.toString()">
+				where grade like '%'||#{keyword}||'%'
+			</when>
+			<when test="type == 'T'.toString()">
+				where enabled like '%'||#{keyword}||'%'
+			</when>
+		</choose>
+	</select>
+
+	<!-- 이메일 중복 확인 -->
+	<select id="emailCheck" resultType="int">
+		SELECT COUNT(*) FROM tbl_user WHERE email = #{email}
+	</select>
+
+	<!-- 아이디 중복 확인 -->
+	<select id="idCheck" resultType="int">
+		SELECT COUNT(*) FROM tbl_user WHERE id = #{id}
+	</select>
+
+	<!-- 비밀번호 확인 -->
+	<select id="pwCheck" resultType="int">
+		SELECT COUNT(*) FROM tbl_user WHERE id = #{id} and password = #{password}
+	</select>
+	
+	<!-- 아이디 찾기 -->
+	<select id="findId" resultType="String">
+		select id from tbl_user where email = #{email}
+	</select>
+
+	<!-- 비밀번호 찾기 - 이메일 일치 여부 확인 -->
+	<select id="infoCheck" resultType="String">
+		select email from tbl_user where id = #{id}
+	</select>
+	
+	<!-- 비밀번호 변경 -->
+	<update id="updatePw">
+		update tbl_user set password = #{password} where id = #{id}
+	</update>
+	
+	<!-- 회원 정보 변경 -->
+	<update id="updateInfo">
+		update tbl_user set email = #{email}, phone = #{phone} where id = #{id}
+	</update>
+
+	
+	<!-- 회원 탈퇴 -->
+	<delete id="withdrawal">
+		delete from tbl_user where id = #{id}
+	</delete>
+
+	<!-- p662 ~ 3 : Mybatis를 사용하기 위한 xml -->
+	<resultMap type="com.forreport.domain.UserVO" id="userMap">
+		<id property="id" column="id" />
+		<result property="id" column="id" />
+		<result property="password" column="password" />
+		<result property="name" column="name" />
+		<result property="phone" column="phone" />
+		<result property="email" column="email" />
+		<result property="grade" column="grade" />
+		<collection property="authList" resultMap="authMap">
+		</collection>
+	</resultMap>
+
+	<resultMap type="com.forreport.domain.AuthVO" id="authMap">
+
+  	<result property="id" column="id"/>
+		<result property="auth" column="auth"/>
+  </resultMap>
+  	
+  	<select id="read" resultMap="userMap">
+  		SELECT
+  			mem.id, password, name, enabled, phone, email, grade, auth
+  		FROM
+  			tbl_user mem LEFT OUTER JOIN tbl_auth auth on mem.id = auth.id
+  		WHERE mem.id = #{id}
+  	</select>
+  	
+  	
+  	
+  	
+  	<!-- 은지: 관리자 페이지 - 회원 등급 변경 -->
+  	<update id="updateGrade">
+  		update
+  			tbl_user
+  		set
+  			grade = #{grade}
+  		where
+  			id = #{id}
+  	</update>
+  	
+  	<!-- 은지 - view페이지 - 회원 등급 보여주기 -->
+  	<select id="getGrade" resultType="int">
+  		select grade from tbl_user where id= #{id}
+  	</select>
+  
+  
+     <sql id="criteria">
+		<trim prefix="(" suffix=") AND " prefixOverrides="OR">
+			<foreach collection="typeArr" item='type'>
+				<trim prefix="OR">
+					<choose>
+						<when test="type == 'I'.toString()">
+							id like '%'||#{keyword}||'%'
+						</when>
+						<when test="type == 'N'.toString()">
+							name like '%'||#{keyword}||'%'
+						</when>
+						<when test="type == 'P'.toString()">
+							phone like '%'||#{keyword}||'%'
+						</when>
+						<when test="type == 'E'.toString()">
+							email like '%'||#{keyword}||'%'
+						</when>
+						<when test="type == 'G'.toString()">
+							grade like '%'||#{keyword}||'%'
+						</when>
+						<when test="type == 'T'.toString()">
+							enabled like '%'||#{keyword}||'%'
+						</when>
+					</choose>
+				</trim>
+			</foreach>
+		</trim>
+
+	</sql>
+</mapper>

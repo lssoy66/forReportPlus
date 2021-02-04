@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+  <mapper namespace="com.forreport.mapper.QuestionMapper">
+  
+  <select id="getList2" resultType="com.forreport.domain.QuestionVO">
+  <![CDATA[
+  select * from tbl_question where questionnum > 0
+  ]]>	
+  </select>
+  
+  <insert id="insert2">
+  insert into tbl_question (questionnum, questiontitle, question)
+  values (seq_question.nextval, #{questiontitle}, #{question})
+  </insert>
+  
+  <insert id="insertSelectKey2">
+    <selectKey keyProperty="questionnum" order="BEFORE" resultType="int">
+    select seq_question.nextval from dual
+    </selectKey>
+    insert into tbl_question (questionnum, questiontitle, question)
+    values (#{questionnum}, #{questiontitle}, #{question})
+  </insert>
+  
+  <select id="read2" resultType="com.forreport.domain.QuestionVO">
+  select * from tbl_question where questionnum = #{questionnum}
+  </select>
+  
+  <delete id="delete2">
+  delete from tbl_question where questionnum = #{questionnum}
+  </delete>
+  
+  <update id="update2">
+  update tbl_question
+  set questiontitle = #{questiontitle},
+  question = #{question}
+  where questionnum = #{questionnum}
+  </update>
+  
+  <!-- 공지사항용 -->
+  <!-- 페이징 처리(주문리스트) -->
+   <select id="getQuestionListAllWithPaging2" resultType="com.forreport.domain.QuestionVO">
+   <![CDATA[	
+   		select questionnum, questiontitle, question
+   		from (select /*+INDEX_DESC(tbl_question pk_tbl_question)*/
+   			  	rownum rn, questionnum, questiontitle, question
+   			  from
+   			  	tbl_question
+   			  where
+   			  	rownum <= #{pageNum} * #{amount}
+   			  )
+   		where
+   			(rn > (#{pageNum} - 1) * #{amount})
+   ]]>	
+   </select>
+   
+   <!-- 총 주문 개수 구하기 -->
+   <select id="getTotalCount2" resultType="int">
+   		select
+   			count(*)
+   		from tbl_question
+   </select>
+  
+  
+   
+    <!-- 관리자용 -->
+  <!-- 페이징 처리(주문리스트) -->
+   <select id="getQuestionListAllWithPagingAdmin2" resultType="com.forreport.domain.QuestionVO">
+   <![CDATA[	
+   		select questionnum, questiontitle, question
+   		from (select /*+INDEX_DESC(tbl_question pk_tbl_question)*/
+   			  	rownum rn, questionnum, questiontitle, question
+   			  from
+   			  	tbl_question
+   			  where
+    ]]>
+   			  <include refid="criteria"></include>
+   	 <![CDATA[
+   			  	rownum <= #{pageNum} * #{amount}
+   			  )
+   		where
+   			(rn > (#{pageNum} - 1) * #{amount})
+   ]]>	
+   </select>
+   
+   <!-- 총 주문 개수 구하기 -->
+   <select id="getTotalCountAdmin2" resultType="int">
+   		select
+   			count(*)
+   		from tbl_question
+   		<choose>
+			<when test="type == 'T'.toString()">
+				<![CDATA[
+					where questiontitle like '%'||#{keyword}||'%'					
+				]]>
+				</when>
+				<when test="type == 'C'.toString()">
+					where question like '%'||#{keyword}||'%'
+			</when>
+		</choose>
+   		 
+   </select>
+   
+   <sql id="criteria">
+		<trim prefix="(" suffix=") AND " prefixOverrides="OR">
+			<foreach collection="typeArr" item='type'>
+				<trim prefix="OR">
+					<choose>
+						<when test="type == 'T'.toString()">
+							questiontitle like '%'||#{keyword}||'%'
+						</when>
+						<when test="type == 'C'.toString()">
+							question like '%'||#{keyword}||'%'
+						</when>
+					</choose>
+				</trim>
+			</foreach>
+		</trim>
+
+	</sql>
+   
+  </mapper>

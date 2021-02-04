@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+<mapper namespace="com.forreport.mapper.OrderMapper">
+  
+   <insert id="addOrder">
+   		insert into tbl_order(ordernum, pronum, id, paymethod, payprice, orderdate) 
+   		values(seq_order.nextval, #{pronum}, #{id}, #{paymethod}, #{payprice}, sysdate)
+   </insert>
+   
+   <select id="getOrder" resultType="long">
+   		select ordernum from tbl_order where pronum = #{pronum} and id = #{id}
+   </select>
+   
+   <select id="getOrderList" resultType="com.forreport.domain.OrderVO">
+   		select ordernum, tpro.pronum, tpro.proname, torder.id, paymethod, payprice, orderdate
+   		from tbl_order torder, tbl_product tpro
+   		where (torder.id = #{id}) and (torder.pronum = tpro.pronum)
+        order by ordernum desc
+   </select>
+   
+   <insert id="addVbank">
+   		insert into tbl_vbank(id, ordernum, vbnum, vbname, vbholder, vbdate) 
+   		values(#{id}, #{ordernum}, #{vbnum}, #{vbname}, #{vbholder}, #{vbdate})
+   </insert>
+   
+   <select id="getVbank" resultType="com.forreport.domain.VbankVO">
+   		select * from tbl_vbank where id = #{id} and ordernum = #{ordernum}
+   </select>
+   
+   <!-- 검색 -->
+   <sql id="criteria">  
+		<trim prefix="(" suffix=") AND " prefixOverrides="AND">
+		    <if test="type != null &amp;&amp; !type.equals('')">
+		    	<trim prefix="AND">
+		    		<if test="type.contains('N'.toString())">
+		    			ordernum like '%'||#{keywordOnum}||'%'
+		    		</if>
+				</trim>
+				<trim prefix="AND">
+					<if test="type.contains('D'.toString())">
+		    			orderdate between to_date(#{keywordDay}, 'yyyy-mm-dd') and sysdate
+		    		</if>
+				</trim>
+				<trim prefix="AND">
+					<if test="type.contains('C'.toString())">
+		    			to_char(orderdate) = to_date(#{keywordDay}, 'yyyy-mm-dd')
+		    		</if>
+				</trim>
+				<trim prefix="AND">
+					<if test="type.contains('O'.toString())"> 
+		    			paymethod = #{keywordOme} 
+		    		</if>
+				</trim>
+		    </if>
+		</trim>
+	</sql>
+	
+	<!-- 상품이름검색(조인테이블) -->
+	<sql id="criteria_proname">  
+		<if test="type != null &amp;&amp; !type.equals('')">
+		   <trim prefix="AND (" suffix=")">
+		    	<if test="type.contains('P'.toString())">
+		    		tbl_product.proname like '%'||#{keywordPname}||'%'
+		    	</if>
+		   </trim>
+		</if>
+	</sql>
+		    		   
+   <!-- 페이징 처리(주문리스트) -->
+   <select id="getOrderListAllWithPaging" resultType="com.forreport.domain.OrderVO">
+   <![CDATA[	
+   		select ordernum, torder.pronum, tpro.proname, torder.id, paymethod, payprice, orderdate
+   		from (select /*+INDEX_DESC(tbl_order pk_tbl_order)*/
+   			  rownum rn, ordernum, tbl_order.pronum, tbl_order.id, paymethod, payprice, orderdate
+   			  from tbl_order, tbl_product
+   			  where 
+   ]]>
+   			  <include refid="criteria"></include>		
+   <![CDATA[			  
+   			  (rownum <= #{pageNum} * #{amount}) 
+   ]]>
+   			  <include refid="criteria_proname"></include>
+   <![CDATA[
+   			  and (tbl_order.pronum = tbl_product.pronum)) torder, tbl_product tpro
+   		where (rn > (#{pageNum} - 1) * #{amount}) and (torder.pronum = tpro.pronum)
+   ]]>
+   </select>
+   
+   <!-- 총 주문 개수 구하기 -->
+   <select id="getTotalCount" resultType="int">
+   		select count(*) from tbl_order, tbl_product
+   		where 
+   		<include refid="criteria"></include>
+   		(ordernum > 0) 
+   		<include refid="criteria_proname"></include>
+   		and (tbl_order.pronum = tbl_product.pronum)	
+   </select>
+   
+
+   <!-- 특정 상품의 총 주문 개수 구하기 -->
+   <select id="getTotalCountByPronum" resultType="int">
+   		select count(*) from tbl_order where pronum = #{pronum}
+   </select>
+   
+   
+   <!-- 은지: 리뷰 작성자가 해당 제품 구매했는지 여부 확인 -->
+   <select id="getOrderData" resultType="int">
+   	 	select count(*) from tbl_order where id = #{id} and pronum=#{pronum}
+
+   </select>
+  
+</mapper>
+
+
+
+
+

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.forreport.mapper.ReviewMapper">
+
+	<!-- 리뷰 삽입 -->
+	<insert id="insertReview">
+		insert into tbl_review
+		values (seq_review.nextval, #{pronum}, #{id}, #{review}, sysdate, #{rate})
+	</insert>
+	
+	<!-- 리뷰 리스트 얻어오기 + 페이징 -->
+	<select id="getReviewList" resultType="com.forreport.domain.ReviewVO">
+		<![CDATA[
+			select
+				reviewnum, pronum, id, review, reviewdate, rate
+			from
+			 	(
+			 		select  /*+ INDEX_ASC(tbl_review PK_TBL_REVIEW)*/
+			 			rownum rn, reviewnum, pronum, id, review, reviewdate, rate 
+			 		from
+			 			tbl_review
+			 		where pronum = #{pronum}
+			 				and rownum <= (#{reviewCri.pageNum} * #{reviewCri.amount})
+			 	)
+			where rn > ((#{reviewCri.pageNum} - 1) * #{reviewCri.amount})
+		]]> 
+	</select>
+	
+	<!-- 리뷰 삭제하기 -->
+	<delete id="removeReview">
+		delete from tbl_review
+		where reviewnum = #{reviewNum}
+	</delete>
+	
+	<!-- 리뷰 개수 구하기 -->
+	<select id="getReviewCnt" resultType="int">
+		select count(*) from tbl_review where pronum = ${pronum}
+	</select>
+	
+	<!-- 평균 별점 구하기 -->
+	<select id="getAvgRate" resultType="Double">
+		select avg(rate) from tbl_review where pronum = ${pronum}
+	</select>
+	
+	<!-- 각 별점 별 사람 수 구하기 -->
+	<select id="getRateFive" resultType="int">
+		select count(*) count from tbl_review where pronum = ${pronum} and rate = 5
+	</select>
+	<select id="getRateFour" resultType="int">
+		select count(*) count from tbl_review where pronum = ${pronum} and rate = 4
+	</select>
+	<select id="getRateThree" resultType="int">
+		select count(*) count from tbl_review where pronum = ${pronum} and rate = 3
+	</select>
+	<select id="getRateTwo" resultType="int">
+		select count(*) count from tbl_review where pronum = ${pronum} and rate = 2
+	</select>
+	<select id="getRateOne" resultType="int">
+		select count(*) count from tbl_review where pronum = ${pronum} and rate = 1
+	</select>
+	
+	<!-- 리뷰 작성자와 삭제 요청자 일치 여부 확인 -->
+   <select id="getDeleteData" resultType="int">
+   	 	select count(*) from tbl_review where id = #{id} and pronum=#{pronum} and reviewnum=#{reviewnum}
+   </select>
+
+</mapper>

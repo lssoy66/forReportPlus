@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:security="http://www.springframework.org/schema/security"
+	xsi:schemaLocation="http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security.xsd
+						http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+    
+    <bean id="customAccessDenied" class="com.forreport.security.CustomAccessDeniedHandler"></bean> 
+    <bean id="customLoginSuccess" class="com.forreport.security.CustomLoginSuccessHandler"></bean>
+    <bean id="bcryptPasswordEncoder" class="org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder"></bean>
+    <bean id="customUserDetailsService" class="com.forreport.security.CustomUserDetailsService"></bean>
+     
+	<security:http>
+		<security:intercept-url pattern="/login/all.fr" access="permitAll" />
+		<security:intercept-url pattern="/login/member.fr" access="hasRole('ROLE_MEMBER')" />
+		<security:intercept-url pattern="/admin/*" access="hasRole('ROLE_ADMIN')" />
+		
+<!-- 		<security:access-denied-handler error-page="/login/accessError"/> -->
+        <security:access-denied-handler ref="customAccessDenied"/>
+        <security:form-login login-page="/login/customLogin.fr" authentication-success-handler-ref="customLoginSuccess" />
+        <security:logout logout-url="/login/customLogout.fr" invalidate-session="true" delete-cookies="JSESSIONID,remember-me"
+        logout-success-url="/forreport.fr"/> <!-- 로그아웃 시 쿠키 삭제 -->
+        <!-- remember-me -->
+        <security:remember-me data-source-ref="dataSource" token-validity-seconds="604800"/> <!--유효시간 지정-->
+        
+	</security:http>
+
+	<security:authentication-manager erase-credentials="false">
+		<security:authentication-provider user-service-ref="customUserDetailsService">
+<!-- 			<security:jdbc-user-service data-source-ref="dataSource"  -->
+<!-- 			users-by-username-query="select id, password, enabled from tbl_user where id = ?" -->
+<!-- 			authorities-by-username-query="select id, auth from tbl_auth2 where id = ?"/> -->
+			<security:password-encoder ref="bcryptPasswordEncoder"/>
+			
+		</security:authentication-provider>
+	</security:authentication-manager>
+</beans>

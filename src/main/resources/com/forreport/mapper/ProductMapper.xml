@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.forreport.mapper.ProductMapper">
+
+<!-- SQL -->
+
+<!-- 키워드에 따라 서로 다른 쿼리문 입력 -->
+	<sql id="useInputKeyword">
+		<choose>
+			<!-- 키워드 입력 한 경우 -->
+			<when test="inputKeyword!=null">
+				and title like '%'||#{inputKeyword}||'%'
+			</when>
+		</choose>
+	</sql>
+<!-- END: 키워드에 따라 서로 다른 쿼리문 입력 -->
+
+<!-- 소분류, 대분류 선택 여부에 따라 서로 다른 쿼리문 입력 -->
+	<sql id="getListAboutCategory">
+		<choose>
+			<!-- smallCategory 선택 안한 경우 -->
+			<when test="smallCategory==999">
+				<choose>
+					<!-- largeCategory 선택 안 한 경우 -->
+					<when test="largeCategory==999">
+					<![CDATA[
+						(largeCa = 0 or largeCa = 1)and
+						rownum <= #{pageNum} * #{amount}
+					]]>
+					</when>
+					<when test="largeCategory!=999">
+						<![CDATA[
+							largeCa = #{largeCategory} and
+							rownum <= #{pageNum} * #{amount}
+						]]>	
+					</when>
+				</choose>
+			</when>
+			<when test="smallCategory!=999">
+				<![CDATA[
+					largeCa = #{largeCategory} and
+					smallCa = #{smallCategory} and
+					rownum <= #{pageNum} * #{amount}
+				]]>	
+			</when>
+		</choose>
+	</sql>
+<!-- END: 소분류, 대분류 선택 여부에 따라 서로 다른 쿼리문 입력 -->
+
+<!-- SQL -->	
+
+
+
+	<!-- 검색 조건에 맞게 List로 Product 정보 가져오기 -->
+	<select id="getProductListWithPaging" resultType="com.forreport.domain.ProductVO">
+		<![CDATA[	
+			select
+				pronum, id, largeCa, smallCa, title, proname, prodsc, price, uploadDate, approval
+			from (
+					select /*+ INDEX_DESC(tbl_product PK_TBL_PRODUCT)*/
+						rownum rn, pronum, id, largeCa, smallCa, title, proname, prodsc, price, uploadDate, approval
+					from
+						tbl_product
+					where
+		]]>
+		<include refid="getListAboutCategory"/>
+		<include refid="useInputKeyword"/>
+		and approval = 1
+		<![CDATA[
+				)
+			where
+				rn > (#{pageNum}-1) * #{amount}
+		]]>		
+	</select>
+	
+	
+	
+	<!-- 검색 조건에 맞는 게시글의 개수 가져오기 -->
+	<select id="getTotalCount" resultType="int">
+		select count(*)
+		from
+			tbl_product
+		where
+			<choose>
+				<!-- smallCategory 선택 안한 경우 -->
+				<when test="smallCategory==999">
+					<choose>
+						<!-- largeCategory 선택 안 한 경우 -->
+						<when test="largeCategory==999">
+							(largeCa = 0 or largeCa = 1)
+							<include refid="useInputKeyword"/>
+						</when>
+						<when test="largeCategory!=999">
+							<![CDATA[
+								largeCa = #{largeCategory}
+							]]>
+							<include refid="useInputKeyword"/>
+						</when>
+					</choose>
+				</when>
+				<when test="smallCategory!=999">
+					<![CDATA[
+						largeCa = #{largeCategory} and
+						smallCa = #{smallCategory} 
+					]]> 
+					<include refid="useInputKeyword"/>
+				</when>
+		</choose>
+		and approval = 1	
+	</select>
+	
+	<!-- 상품번호에 맞는 상품정보 전체 가져오기 -->
+	<select id="getProduct" resultType="com.forreport.domain.ProductVO">
+<!-- 		select * from tbl_product where pronum = #{pronum} -->
+<!-- 		select nvl(id,'탈퇴회원') as id from tbl_product where pronum=#{pronum}; -->
+		select pronum, nvl(id,'탈퇴회원') as id,  largeca, smallca, title, proname, prodsc, price, uploaddate, approval from tbl_product where pronum=#{pronum}
+		
+	</select>
+	
+	<!-- 등록 상품 내역 tbl_product에 업로드 -->
+	<insert id="uploadTblProduct">
+		insert into tbl_product values(seq_product.nextval, #{id}, #{largeCa}, #{smallCa}, #{title}, #{proname}, #{prodsc}, #{price}, sysdate, 0)
+	</insert>
+	
+	<!-- 등록 상품 내역 tbl_upload에 업로드 -->
+	<insert id="uploadTblUpload">
+		insert into tbl_upload values(seq_product.currval, #{UUID}, #{fileDirectory}, #{fileName})
+	</insert>
+	
+	<!-- UUID를 이용해서 pronum 가져오기 -->
+	<select id="getPronum" resultType="Integer">
+		select pronum from tbl_upload where UUID=#{UUID} and fileName=#{fileName} 
+	</select>	
+	
+	<!-- tbl_upload에서 썸네일 정보 가져오기 -->
+	<select id="getThumbnail" resultType="com.forreport.domain.UploadVO">
+		select * from tbl_upload where pronum = #{pronum}
+	</select>
+	
+
+		
+	<!-- 수연 추가 :: 사용자(판매자)가 등록한 상품 전체 가져오기(페이징X) -->
+	<select id="getProductByIdNotPaging" resultType="com.forreport.domain.ProductVO">
+	<![CDATA[
+		select * 
+		from (select /*+ INDEX_DESC(tbl_product PK_TBL_PRODUCT)*/
+					 rownum rn, pronum, id, largeCa, smallCa, title, proname, prodsc, price, uploadDate, approval
+			  from tbl_product
+			  where id = #{id})
+	]]>
+	</select>	
+		
+	<!-- 수연 추가 :: 사용자(판매자)가 등록한 상품 전체 가져오기(페이징) -->
+	<select id="getProductById" resultType="com.forreport.domain.ProductVO">
+	<![CDATA[
+		select * 
+		from (select /*+ INDEX_DESC(tbl_product PK_TBL_PRODUCT)*/
+					 rownum rn, pronum, id, largeCa, smallCa, title, proname, prodsc, price, uploadDate, approval
+			  from tbl_product
+			  where (id = #{id}) and (rownum <= #{criteria.pageNum} * #{criteria.amount}) )
+		where (rn > (#{criteria.pageNum} - 1) * #{criteria.amount})
+	]]>
+	</select>
+	
+	<!-- 수연 추가 :: 사용자(판매자)가 등록한 상품 총 개수 -->
+	<select id="getTotalCountById" resultType="int">
+		select count(*) from tbl_product where id = #{id}
+	</select>
+	
+
+	<!-- 관리자 페이지 - 페이징 처리된 상품 목록 전달 -->
+	<select id="getProductListWithPagingInAdmin" resultType="com.forreport.domain.ProductVO">
+	<![CDATA[	
+			select
+				pronum, id, largeCa, smallCa, title, proname, prodsc, price, uploadDate, approval
+			from (
+					select /*+ INDEX_DESC(tbl_product PK_TBL_PRODUCT)*/
+						rownum rn, pronum, id, largeCa, smallCa, title, proname, prodsc, price, uploadDate, approval
+					from
+						tbl_product
+					where
+						rownum <= #{pageNum} * #{amount}		
+		]]>
+						<choose>
+							<when test="approval!=999">
+								and approval = #{approval}
+							</when>
+						</choose>
+		
+		<![CDATA[					
+						
+				)
+			where
+				rn > (#{pageNum}-1) * #{amount}
+		
+	]]> 
+	</select>	
+	
+	<!-- 관리자 페이지 조건에 맞는 상품 개수를 가져온다. -->
+	<select id="getTotalInAdmin" resultType="Integer">
+		select count(*)
+		from tbl_product
+		 
+		<choose>
+			<when test="approval!=999">
+				where approval = #{approval}
+			</when>
+		</choose>	
+	</select>
+	
+	<!-- 관리자 페이지 - 상품 승인 변경 -->
+	<update id="updateApproval">
+		update
+			tbl_product
+		set
+			approval = #{approval}
+		where
+			pronum = #{pronum}
+	</update>
+	
+	<!-- 관리자 페이지 - 상품 승인된 콘텐츠 개수 세기 -->
+	<select id="countApproval" resultType="Integer">
+		select count(*)
+		from tbl_product
+		where id = #{id} and approval = 1
+	</select>
+	
+	<!-- view: 삭제 요청으로 approval 변경 -->
+	<update id="deleteRequest">
+		update
+			tbl_product
+		set
+			approval = 3
+		where
+			pronum = #{pronum}
+	</update>
+
+</mapper>

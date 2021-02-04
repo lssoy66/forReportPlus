@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+  <mapper namespace="com.forreport.mapper.Admin2Mapper">
+  
+  <select id="getList1" resultType="com.forreport.domain.NoticeVO">
+  <![CDATA[
+  select * from tbl_notice where noticenum > 0
+  ]]>	
+  </select>
+  
+  <insert id="insert1">
+  insert into tbl_notice (noticenum, noticetitle, notice)
+  values (seq_notice.nextval, #{noticetitle}, #{notice})
+  </insert>
+  
+  <insert id="insertSelectKey1">
+    <selectKey keyProperty="noticenum" order="BEFORE" resultType="int">
+    select seq_notice.nextval from dual
+    </selectKey>
+    insert into tbl_notice (noticenum, noticetitle, notice)
+    values (#{noticenum}, #{noticetitle}, #{notice})
+  </insert>
+  
+  <select id="read1" resultType="com.forreport.domain.NoticeVO"> 
+  select * from tbl_notice where noticenum = #{noticenum}
+  </select>
+  
+  <delete id="delete1">
+  delete from tbl_notice where noticenum = #{noticenum}
+  </delete>
+  
+  <update id="update1">
+  update tbl_notice
+  set noticetitle = #{noticetitle},
+  notice = #{notice},
+  revisedate = sysdate
+  where noticenum = #{noticenum}
+  </update>
+  
+  <!-- 페이징 처리(주문리스트) -->
+   <select id="getNoticeListAllWithPaging" resultType="com.forreport.domain.NoticeVO">
+   <![CDATA[	
+   		select noticenum, noticetitle, notice, writedate
+   		from (select /*+INDEX_DESC(tbl_notice pk_tbl_notice)*/
+   			  	rownum rn, noticenum, noticetitle, notice, writedate
+   			  from
+   			  	tbl_notice
+   			  where
+   			  	rownum <= #{pageNum} * #{amount}
+   			  )
+   		where
+   			(rn > (#{pageNum} - 1) * #{amount})
+   ]]>	
+   </select>
+   
+   <!-- 총 주문 개수 구하기 -->
+   <select id="getTotalCount" resultType="int">
+   		select
+   			count(*)
+   		from tbl_notice
+   </select>
+   
+  </mapper>
