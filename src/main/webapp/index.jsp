@@ -7,6 +7,7 @@
 <title>Insert title here</title>
 </head>
 <body>
+	<!-- new Branch Test -->
 	<% response.sendRedirect("forreport.fr"); %>
 </body>
 </html>
