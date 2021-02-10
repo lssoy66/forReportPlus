@@ -13,7 +13,7 @@
 * Database : Oracle 11g
 * IDE : Eclipse
 * Build Automation Tool : Maven
-* Back-Language : JAVA(Spring, MyBatis), JSP, 
+* Back-Language : JAVA(Spring, MyBatis), JSP
 * Front-Language : HTML5, CSS3, Bootstrap, jQuery, JavaScript, JSON, Ajax
 
 ---
