@@ -85,7 +85,7 @@
    			  <include refid="criteria_proname"></include>
    <![CDATA[
    			  and (tbl_order.pronum = tbl_product.pronum)) torder, tbl_product tpro
-   		where (rn > (#{pageNum} - 1) * #{amount}) and (torder.pronum = tpro.pronum)
+   		where (rn > (#{pageNum} - 1) * #{amount}) and (torder.pronum = tpro.pronum) order by ordernum desc
    ]]>
    </select>
    
